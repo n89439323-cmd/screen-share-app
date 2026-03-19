@@ -93,6 +93,16 @@
         }
         .btn-retry:hover { transform: translateY(-2px); }
 
+        .btn-start {
+            padding: 16px 36px; border: none; border-radius: 14px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white; font-family: 'Inter', sans-serif; font-size: 1rem;
+            font-weight: 700; cursor: pointer; transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(34,197,94,0.3);
+            margin-top: 10px;
+        }
+        .btn-start:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(34,197,94,0.45); }
+        
         /* Ended state */
         #endedState .ended-icon { font-size: 3rem; }
     </style>
@@ -102,9 +112,10 @@
     <div class="container">
         <!-- Connecting / about to share -->
         <div class="state active" id="connectingState">
-            <div class="spinner"></div>
-            <h2>Connexion en cours...</h2>
-            <p>Préparation du partage d'écran. Vous allez recevoir une demande de permission dans un instant.</p>
+            <div class="spinner" id="waitSpinner"></div>
+            <h2 id="connectTitle">Connexion à la room...</h2>
+            <p id="connectText">Patiente...</p>
+            <button class="btn-start" id="startBtn" onclick="startSharing()" style="display: none;">▶️ Commencer le partage d'écran</button>
         </div>
 
         <!-- Sharing active -->
@@ -159,19 +170,42 @@
 
         socket.on('host-info', (info) => {
             hostId = info.hostId;
+            const title = document.getElementById('connectTitle');
+            const text = document.getElementById('connectText');
+            const spinner = document.getElementById('waitSpinner');
+            const btn = document.getElementById('startBtn');
+
             if (hostId) {
-                // Host is present, start sharing immediately
-                startSharing();
+                // Host is present, show start button
+                spinner.style.display = 'none';
+                title.textContent = 'L\'hôte est prêt !';
+                text.textContent = 'Cliquez sur le bouton ci-dessous pour démarrer le partage d\'écran. Votre navigateur vous demandera une permission.';
+                btn.style.display = 'block';
             } else {
                 // No host yet, wait
-                showState('connectingState');
-                document.querySelector('#connectingState h2').textContent = 'En attente de l\'hôte...';
-                document.querySelector('#connectingState p').textContent = 'L\'hôte n\'est pas encore connecté. Le partage commencera dès sa connexion.';
+                spinner.style.display = 'block';
+                btn.style.display = 'none';
+                title.textContent = 'En attente de l\'hôte...';
+                text.textContent = 'L\'hôte n\'est pas encore connecté. Veuillez patienter sur cette page.';
             }
         });
 
-        // If host joins later
+        // If host joins later while we're waiting
         socket.on('guest-joined', () => {}); // Not relevant for guest
+
+        // Host joined after guest was already here
+        socket.on('host-joined', (newHostId) => {
+            hostId = newHostId;
+            const title = document.getElementById('connectTitle');
+            const text = document.getElementById('connectText');
+            const spinner = document.getElementById('waitSpinner');
+            const btn = document.getElementById('startBtn');
+            
+            spinner.style.display = 'none';
+            title.textContent = 'L\'hôte est arrivé !';
+            text.textContent = 'Cliquez sur le bouton ci-dessous pour démarrer le partage d\'écran.';
+            btn.style.display = 'block';
+        });
 
         async function startSharing() {
             showState('connectingState');

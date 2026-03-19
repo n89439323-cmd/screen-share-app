@@ -54,6 +54,13 @@ io.on('connection', (socket) => {
     if (role === 'host') {
       rooms[roomId].host = socket.id;
       console.log(`🏠 HÔTE ${socket.id} dans room ${roomId}`);
+
+      // Notify any guests already waiting that the host arrived
+      if (rooms[roomId].guests.length > 0) {
+        rooms[roomId].guests.forEach(guestId => {
+          io.to(guestId).emit('host-joined', socket.id);
+        });
+      }
     } else {
       rooms[roomId].guests.push(socket.id);
       console.log(`👤 INVITÉ ${socket.id} dans room ${roomId}`);
