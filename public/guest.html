@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partage d'écran</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a0f; color: #e0e0e0;
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        .bg::before {
+            content: ''; position: absolute; width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%);
+            top: -80px; left: -80px; animation: f1 12s ease-in-out infinite;
+        }
+        .bg::after {
+            content: ''; position: absolute; width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(236,72,153,0.1) 0%, transparent 70%);
+            bottom: -80px; right: -80px; animation: f2 15s ease-in-out infinite;
+        }
+        @keyframes f1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(80px,60px)} }
+        @keyframes f2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-60px,-80px)} }
+
+        .container {
+            position: relative; z-index: 1;
+            display: flex; flex-direction: column; align-items: center; padding: 30px;
+        }
+
+        /* Loading state */
+        .state { display: none; flex-direction: column; align-items: center; gap: 20px; text-align: center; }
+        .state.active { display: flex; }
+
+        /* Connecting state */
+        #connectingState .spinner {
+            width: 56px; height: 56px;
+            border: 3px solid rgba(99,102,241,0.2); border-top-color: #818cf8;
+            border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .state h2 {
+            font-size: 1.5rem; font-weight: 700;
+            background: linear-gradient(135deg, #818cf8, #c084fc);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .state p { color: #9ca3af; font-size: 0.95rem; line-height: 1.6; max-width: 400px; }
+
+        /* Sharing active state */
+        #sharingState .live-icon {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: linear-gradient(135deg, rgba(34,197,94,0.15), rgba(34,197,94,0.05));
+            border: 2px solid rgba(34,197,94,0.3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.5rem; animation: livePulse 2s ease-in-out infinite;
+        }
+        @keyframes livePulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.05);opacity:0.8} }
+
+        #sharingState h2 {
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .btn-stop {
+            padding: 14px 32px; border: none; border-radius: 14px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white; font-family: 'Inter', sans-serif; font-size: 0.9rem;
+            font-weight: 600; cursor: pointer; transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(239,68,68,0.3);
+            margin-top: 10px;
+        }
+        .btn-stop:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(239,68,68,0.45); }
+
+        /* Error state */
+        #errorState .error-icon {
+            font-size: 3rem;
+        }
+        #errorState h2 {
+            background: linear-gradient(135deg, #f87171, #ef4444);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .btn-retry {
+            padding: 14px 32px; border: none; border-radius: 14px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white; font-family: 'Inter', sans-serif; font-size: 0.9rem;
+            font-weight: 600; cursor: pointer; transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(99,102,241,0.3);
+        }
+        .btn-retry:hover { transform: translateY(-2px); }
+
+        /* Ended state */
+        #endedState .ended-icon { font-size: 3rem; }
+    </style>
+</head>
+<body>
+    <div class="bg"></div>
+    <div class="container">
+        <!-- Connecting / about to share -->
+        <div class="state active" id="connectingState">
+            <div class="spinner"></div>
+            <h2>Connexion en cours...</h2>
+            <p>Préparation du partage d'écran. Vous allez recevoir une demande de permission dans un instant.</p>
+        </div>
+
+        <!-- Sharing active -->
+        <div class="state" id="sharingState">
+            <div class="live-icon">📡</div>
+            <h2>Partage d'écran actif</h2>
+            <p>Votre écran est partagé en direct. L'hôte peut voir votre écran en temps réel.</p>
+            <button class="btn-stop" onclick="stopSharing()">⏹️ Arrêter le partage</button>
+        </div>
+
+        <!-- Error -->
+        <div class="state" id="errorState">
+            <div class="error-icon">❌</div>
+            <h2>Partage refusé</h2>
+            <p id="errorText">Vous avez refusé le partage d'écran ou une erreur est survenue.</p>
+            <button class="btn-retry" onclick="startSharing()">🔄 Réessayer</button>
+        </div>
+
+        <!-- Ended -->
+        <div class="state" id="endedState">
+            <div class="ended-icon">✅</div>
+            <h2>Partage terminé</h2>
+            <p>Le partage d'écran a été arrêté. Vous pouvez fermer cette page.</p>
+            <button class="btn-retry" onclick="startSharing()">🔄 Repartager</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const roomId = window.location.pathname.split('/').pop();
+        const socket = io();
+        let localStream = null;
+        let peerConnection = null;
+        let hostId = null;
+
+        const iceConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'stun:stun3.l.google.com:19302' }
+            ]
+        };
+
+        function showState(id) {
+            document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        // Join as guest
+        socket.emit('join-room', { roomId, role: 'guest' });
+
+        socket.on('host-info', (info) => {
+            hostId = info.hostId;
+            if (hostId) {
+                // Host is present, start sharing immediately
+                startSharing();
+            } else {
+                // No host yet, wait
+                showState('connectingState');
+                document.querySelector('#connectingState h2').textContent = 'En attente de l\'hôte...';
+                document.querySelector('#connectingState p').textContent = 'L\'hôte n\'est pas encore connecté. Le partage commencera dès sa connexion.';
+            }
+        });
+
+        // If host joins later
+        socket.on('guest-joined', () => {}); // Not relevant for guest
+
+        async function startSharing() {
+            showState('connectingState');
+            try {
+                localStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { cursor: 'always', width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
+                    audio: true
+                });
+
+                showState('sharingState');
+
+                // Handle user stopping via browser UI
+                localStream.getVideoTracks()[0].addEventListener('ended', () => {
+                    stopSharing();
+                });
+
+                // Create peer connection and send offer to host
+                await connectToHost();
+
+            } catch (err) {
+                console.error('Share error:', err);
+                showState('errorState');
+                if (err.name === 'NotAllowedError') {
+                    document.getElementById('errorText').textContent = 'Vous avez annulé le partage d\'écran. Cliquez sur Réessayer pour recommencer.';
+                } else {
+                    document.getElementById('errorText').textContent = 'Erreur: ' + err.message;
+                }
+            }
+        }
+
+        async function connectToHost() {
+            if (!hostId || !localStream) return;
+
+            peerConnection = new RTCPeerConnection(iceConfig);
+
+            peerConnection.onicecandidate = (e) => {
+                if (e.candidate) {
+                    socket.emit('ice-candidate', { candidate: e.candidate, to: hostId });
+                }
+            };
+
+            peerConnection.onconnectionstatechange = () => {
+                console.log('Connection:', peerConnection.connectionState);
+            };
+
+            // Add local stream tracks
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+            });
+
+            // Create and send offer
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            socket.emit('offer', { offer, to: hostId });
+        }
+
+        socket.on('answer', async ({ answer }) => {
+            if (peerConnection) {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+            }
+        });
+
+        socket.on('ice-candidate', async ({ candidate }) => {
+            if (peerConnection && candidate) {
+                try { await peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); }
+                catch (e) { console.error('ICE error:', e); }
+            }
+        });
+
+        function stopSharing() {
+            if (localStream) {
+                localStream.getTracks().forEach(t => t.stop());
+                localStream = null;
+            }
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            socket.emit('sharing-stopped');
+            showState('endedState');
+        }
+
+        window.addEventListener('beforeunload', () => {
+            if (localStream) stopSharing();
+        });
+    </script>
+</body>
+</html>

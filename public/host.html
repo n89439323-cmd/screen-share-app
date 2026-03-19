@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🖥️ Hôte - Vue en direct</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #0a0a0f; color: #e0e0e0; min-height: 100vh; }
+
+        .bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        .bg::before {
+            content: ''; position: absolute; width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(34,197,94,0.1) 0%, transparent 70%);
+            top: -80px; right: -80px; animation: f1 15s ease-in-out infinite;
+        }
+        @keyframes f1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-80px,60px)} }
+
+        /* Header */
+        .header {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            background: rgba(10,10,15,0.9); backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            padding: 10px 20px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .header-left { display: flex; align-items: center; gap: 14px; }
+        .header-left a { color: #818cf8; text-decoration: none; font-size: 0.85rem; font-weight: 500; }
+        .header-left a:hover { color: #a5b4fc; }
+        .role-badge {
+            background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3);
+            border-radius: 8px; padding: 5px 12px; font-size: 0.75rem; font-weight: 700;
+            color: #4ade80; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .header-right { display: flex; align-items: center; gap: 10px; }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,0.5);
+            animation: blink 2s ease-in-out infinite;
+        }
+        .status-dot.connected { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.5); }
+        .status-dot.streaming { background: #6366f1; box-shadow: 0 0 12px rgba(99,102,241,0.6); }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        .status-text { font-size: 0.8rem; color: #9ca3af; }
+
+        /* Main */
+        .main {
+            position: relative; z-index: 1;
+            padding-top: 60px; min-height: 100vh;
+            display: flex; flex-direction: column;
+        }
+
+        /* Link bar */
+        .link-bar {
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            padding: 14px 20px;
+            background: rgba(99,102,241,0.06);
+            border-bottom: 1px solid rgba(99,102,241,0.1);
+        }
+        .link-bar label { font-size: 0.8rem; color: #a5b4fc; font-weight: 600; white-space: nowrap; }
+        .link-input {
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px; padding: 10px 14px; color: #e5e7eb;
+            font-family: 'Inter', monospace; font-size: 0.8rem; width: 360px;
+            outline: none; cursor: text;
+        }
+        .link-input:focus { border-color: rgba(99,102,241,0.4); }
+        .btn-copy {
+            padding: 10px 18px; border: none; border-radius: 10px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white; font-family: 'Inter', sans-serif; font-size: 0.8rem;
+            font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-copy:hover { transform: scale(1.04); box-shadow: 0 4px 16px rgba(99,102,241,0.4); }
+        .btn-copy.copied { background: linear-gradient(135deg, #22c55e, #16a34a); }
+
+        /* Video */
+        .video-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .video-wrapper {
+            position: relative; width: 100%; max-width: 1280px;
+            border-radius: 16px; overflow: hidden;
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+            aspect-ratio: 16/9;
+        }
+        #remoteVideo { width: 100%; height: 100%; object-fit: contain; background: #000; display: none; }
+
+        .placeholder {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+        }
+        .spinner {
+            width: 48px; height: 48px; border: 3px solid rgba(99,102,241,0.2);
+            border-top-color: #818cf8; border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .placeholder-text { color: #6b7280; font-size: 0.95rem; text-align: center; line-height: 1.7; }
+        .placeholder-text strong { color: #a5b4fc; }
+
+        .btn-fullscreen {
+            position: absolute; bottom: 12px; right: 12px;
+            background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.15);
+            color: white; width: 40px; height: 40px; border-radius: 10px;
+            cursor: pointer; display: none; align-items: center; justify-content: center;
+            font-size: 1.2rem; transition: all 0.2s; z-index: 10;
+        }
+        .btn-fullscreen:hover { background: rgba(0,0,0,0.9); }
+
+        /* Live indicator */
+        .live-badge {
+            position: absolute; top: 12px; left: 12px;
+            background: rgba(239,68,68,0.9); color: white;
+            padding: 4px 12px; border-radius: 6px; font-size: 0.7rem;
+            font-weight: 700; letter-spacing: 1px; display: none; z-index: 10;
+            animation: livePulse 1.5s ease-in-out infinite;
+        }
+        @keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 24px; left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(20,20,30,0.95); backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 14px;
+            padding: 12px 22px; font-size: 0.85rem; color: #e5e7eb; z-index: 200;
+            transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        @media (max-width: 640px) {
+            .link-bar { flex-direction: column; }
+            .link-input { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg"></div>
+    <div class="header">
+        <div class="header-left">
+            <a href="/">← Accueil</a>
+            <div class="role-badge">🏠 Hôte</div>
+        </div>
+        <div class="header-right">
+            <div class="status-dot" id="statusDot"></div>
+            <span class="status-text" id="statusText">En attente...</span>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="link-bar">
+            <label>📎 Lien à partager :</label>
+            <input class="link-input" id="shareLink" readonly>
+            <button class="btn-copy" id="copyBtn" onclick="copyLink()">📋 Copier</button>
+        </div>
+        <div class="video-container">
+            <div class="video-wrapper" id="videoWrapper">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <div class="placeholder" id="placeholder">
+                    <div class="spinner"></div>
+                    <div class="placeholder-text">
+                        <strong>En attente de connexion...</strong><br>
+                        Envoyez le lien ci-dessus à la personne dont vous voulez voir l'écran.<br>
+                        Dès qu'elle clique, l'écran apparaîtra ici automatiquement.
+                    </div>
+                </div>
+                <div class="live-badge" id="liveBadge">● LIVE</div>
+                <button class="btn-fullscreen" id="fullscreenBtn" onclick="toggleFullscreen()">⛶</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"><span id="toastIcon"></span><span id="toastText"></span></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const roomId = window.location.pathname.split('/').pop();
+        const socket = io();
+        let peerConnection = null;
+
+        const iceConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'stun:stun3.l.google.com:19302' }
+            ]
+        };
+
+        // Set share link
+        const baseUrl = window.location.origin;
+        document.getElementById('shareLink').value = `${baseUrl}/join/${roomId}`;
+
+        // Join as host
+        socket.emit('join-room', { roomId, role: 'host' });
+
+        socket.on('guest-joined', (guestId) => {
+            document.getElementById('statusDot').classList.add('connected');
+            document.getElementById('statusText').textContent = 'Invité connecté, partage en cours...';
+            showToast('👤', 'Un utilisateur a rejoint ! Partage en cours...');
+        });
+
+        socket.on('offer', async ({ offer, from }) => {
+            console.log('📥 Offre reçue du guest');
+            peerConnection = new RTCPeerConnection(iceConfig);
+
+            peerConnection.onicecandidate = (e) => {
+                if (e.candidate) {
+                    socket.emit('ice-candidate', { candidate: e.candidate, to: from });
+                }
+            };
+
+            peerConnection.ontrack = (e) => {
+                console.log('🎬 Stream reçu !');
+                const video = document.getElementById('remoteVideo');
+                video.srcObject = e.streams[0];
+                video.style.display = 'block';
+                document.getElementById('placeholder').style.display = 'none';
+                document.getElementById('fullscreenBtn').style.display = 'flex';
+                document.getElementById('liveBadge').style.display = 'block';
+                document.getElementById('statusDot').classList.add('streaming');
+                document.getElementById('statusText').textContent = '● En direct';
+                showToast('🖥️', 'Écran reçu en direct !');
+            };
+
+            peerConnection.onconnectionstatechange = () => {
+                console.log('Connection state:', peerConnection.connectionState);
+            };
+
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.emit('answer', { answer, to: from });
+        });
+
+        socket.on('ice-candidate', async ({ candidate }) => {
+            if (peerConnection && candidate) {
+                try { await peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); }
+                catch (e) { console.error('ICE error:', e); }
+            }
+        });
+
+        socket.on('sharing-stopped', () => {
+            document.getElementById('remoteVideo').style.display = 'none';
+            document.getElementById('placeholder').style.display = 'flex';
+            document.getElementById('fullscreenBtn').style.display = 'none';
+            document.getElementById('liveBadge').style.display = 'none';
+            document.getElementById('statusDot').classList.remove('streaming');
+            document.getElementById('statusText').textContent = 'Partage terminé';
+            showToast('⏹️', 'Le partage a été arrêté');
+        });
+
+        socket.on('guest-left', () => {
+            document.getElementById('remoteVideo').style.display = 'none';
+            document.getElementById('placeholder').style.display = 'flex';
+            document.getElementById('fullscreenBtn').style.display = 'none';
+            document.getElementById('liveBadge').style.display = 'none';
+            document.getElementById('statusDot').classList.remove('connected', 'streaming');
+            document.getElementById('statusText').textContent = 'Invité déconnecté';
+            showToast('👋', 'L\'invité s\'est déconnecté');
+        });
+
+        function copyLink() {
+            const link = document.getElementById('shareLink').value;
+            navigator.clipboard.writeText(link).then(() => {
+                const btn = document.getElementById('copyBtn');
+                btn.classList.add('copied');
+                btn.textContent = '✅ Copié !';
+                showToast('📋', 'Lien copié !');
+                setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '📋 Copier'; }, 2500);
+            });
+        }
+
+        function toggleFullscreen() {
+            const w = document.getElementById('videoWrapper');
+            if (!document.fullscreenElement) w.requestFullscreen();
+            else document.exitFullscreen();
+        }
+
+        function showToast(icon, text) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastIcon').textContent = icon;
+            document.getElementById('toastText').textContent = text;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screen Share - Créer une session</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; overflow: hidden;
+        }
+        .bg::before {
+            content: ''; position: absolute; width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+            top: -100px; left: -100px; animation: f1 15s ease-in-out infinite;
+        }
+        .bg::after {
+            content: ''; position: absolute; width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(236,72,153,0.12) 0%, transparent 70%);
+            bottom: -100px; right: -100px; animation: f2 18s ease-in-out infinite;
+        }
+        @keyframes f1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(100px,80px) scale(1.1)} }
+        @keyframes f2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-80px,-60px) scale(1.15)} }
+
+        .container {
+            position: relative; z-index: 1;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; padding: 40px 20px;
+        }
+        .logo { font-size: 3.5rem; margin-bottom: 8px; animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+
+        h1 {
+            font-size: 2.8rem; font-weight: 800;
+            background: linear-gradient(135deg, #818cf8, #c084fc, #f472b6);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 12px; letter-spacing: -1px;
+        }
+        .subtitle { font-size: 1.1rem; color: #9ca3af; margin-bottom: 50px; font-weight: 300; }
+
+        .card {
+            background: rgba(255,255,255,0.04); backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08); border-radius: 24px;
+            padding: 48px; max-width: 520px; width: 100%; text-align: center;
+            transition: all 0.3s ease;
+        }
+        .card:hover { border-color: rgba(129,140,248,0.2); box-shadow: 0 0 60px rgba(99,102,241,0.08); }
+        .card h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 16px; color: #f3f4f6; }
+        .card p { color: #9ca3af; line-height: 1.7; margin-bottom: 36px; font-size: 0.95rem; }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 16px 36px; border: none; border-radius: 16px;
+            font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 600;
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); text-decoration: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white;
+            box-shadow: 0 4px 24px rgba(99,102,241,0.3);
+        }
+        .btn-primary:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 8px 32px rgba(99,102,241,0.45); }
+
+        .steps { display: flex; gap: 24px; margin-top: 50px; max-width: 700px; width: 100%; }
+        .step {
+            flex: 1; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px; padding: 24px; text-align: center; transition: all 0.3s ease;
+        }
+        .step:hover { border-color: rgba(129,140,248,0.15); transform: translateY(-4px); }
+        .step-num {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white; display: inline-flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.85rem; margin-bottom: 12px;
+        }
+        .step h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; color: #e5e7eb; }
+        .step p { font-size: 0.8rem; color: #6b7280; line-height: 1.5; }
+
+        @media (max-width: 640px) {
+            h1 { font-size: 1.8rem; }
+            .card { padding: 32px 24px; }
+            .steps { flex-direction: column; gap: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg"></div>
+    <div class="container">
+        <div class="logo">🖥️</div>
+        <h1>Screen Share</h1>
+        <p class="subtitle">Voyez l'écran de n'importe quel appareil en temps réel</p>
+        <div class="card">
+            <h2>👁️ Voir un écran à distance</h2>
+            <p>Créez une room et envoyez le lien à la personne cible. Dès qu'elle clique, son partage d'écran se lance automatiquement et vous voyez tout en direct.</p>
+            <a href="/create" class="btn btn-primary">
+                <span>🚀</span> Créer une Room
+            </a>
+        </div>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h3>Créez une room</h3>
+                <p>Un lien unique est généré pour vous</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h3>Envoyez le lien</h3>
+                <p>La cible clique → le partage se lance auto</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h3>Recevez l'écran</h3>
+                <p>Vous voyez son écran en temps réel</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
